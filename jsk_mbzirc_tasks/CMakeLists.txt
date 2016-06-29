@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(jsk_mbzirc_tasks)
-#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -24,7 +24,7 @@ generate_messages(
   jsk_mbzirc_msgs)
 
 #add gpu support
-set(ENABLE_CUDA ON)
+set(ENABLE_CUDA OFF)
 
 find_package(OpenMP)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -54,9 +54,17 @@ if(ENABLE_CUDA)
     add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
     add_dependencies(uav_img2pointcloud UAV_IMG2POINTCLOUD_CU_LIB)
     target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${CUDA_LIBRARIES} UAV_IMG2POINTCLOUD_CU_LIB)
+    #get train data node
+    cuda_add_library(GET_TRAIN_DATA_LIB ${LIB_TYPE} src/gettraindata/get_train_data.cu)
+    add_executable(get_train_data src/gettraindata/get_train_data.cpp)
+    add_dependencies(get_train_data GET_TRAIN_DATA_LIB)
+    target_link_libraries(get_train_data ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${CUDA_LIBRARIES} GET_TRAIN_DATA_LIB)
 else()
     add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
     target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+    #get train data node
+    add_executable(get_train_data src/gettraindata/get_train_data.cpp)
+    target_link_libraries(get_train_data ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 endif(ENABLE_CUDA)
 
 #uav_teleop_keyboard node

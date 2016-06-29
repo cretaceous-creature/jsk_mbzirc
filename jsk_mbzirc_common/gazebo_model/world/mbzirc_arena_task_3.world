@@ -24,15 +24,23 @@
           <speed>12</speed>
         </clouds>
       </sky>
+	<background>0 0 0 0</background>
    </scene>
+
+    <model name="arena" >
+       <pose>0 0 -0.1 1.5708 -0 0</pose>
+     <include>
+      <uri>model://arena</uri>
+     </include>
+      <plugin name="mbzirc_gazebo_arena_plugin" filename="libmbzirc_gazebo_world_plugin.so">
+        <staticObject>true</staticObject>
+      </plugin>
+    </model>
 
     <include>
       <uri>model://sun</uri>
     </include>
 
-    <include>
-      <uri>model://arena</uri>
-    </include>
 
     <!-- this is for gazebo 1.5 -->
     <!-- <population name="small_cylinder" > -->
@@ -262,6 +270,9 @@
       <include>
         <uri>model://dropping_zone_box</uri>
       </include>
+      <plugin name="dropping_zone_box_plugin" filename="libmbzirc_gazebo_world_plugin.so">
+        <staticObject>true</staticObject>
+      </plugin>
     </model>
 
     <gui fullscreen='0'>
