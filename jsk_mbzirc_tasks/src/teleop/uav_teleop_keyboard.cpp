@@ -38,6 +38,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
 
 #define KEYCODE_A 0x61
@@ -67,9 +68,11 @@ private:
     double walk_vel, run_vel, yaw_rate, yaw_rate_run, vertical_vel;
     geometry_msgs::Twist cmd;
     std_msgs::Float64 gripper;
+    std_msgs::Bool magnet;
     ros::NodeHandle n_;
     ros::Publisher vel_pub_;
     ros::Publisher grip_pub_;
+    ros::Publisher mag_pub_;
     bool teleopUGV;
 
 public:
@@ -80,11 +83,12 @@ public:
 
         vel_pub_ = n_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
         grip_pub_ = n_.advertise<std_msgs::Float64>("/r_gripper_controller/command",1);
+        mag_pub_ = n_.advertise<std_msgs::Bool>("/mag_on",1);
         if(!n_.getParam("teleopUGV",teleopUGV))
             puts("fail to load the param");
         ros::NodeHandle n_private("~");
         n_private.param("walk_vel", walk_vel, 1.0);
-        n_private.param("run_vel", run_vel, 8.0);
+        n_private.param("run_vel", run_vel, 4.0);
         n_private.param("yaw_rate", yaw_rate, 0.5);
         n_private.param("yaw_run_rate", yaw_rate_run, 1.5);
         n_private.param("vertical_vel", vertical_vel, 2.0);
@@ -151,6 +155,7 @@ void TeleopUAVKeyboard::keyboardLoop()
         puts("Use 'PL' to up/down");
         puts("Use 'H' to hover");
         puts("Press 'Shift' to run");
+        puts("Press 'OC' to open and close magnet");
     }
 
 
@@ -238,11 +243,13 @@ void TeleopUAVKeyboard::keyboardLoop()
             gripper.data += 0.01;
             gripper.data = gripper.data>0.5?0.5:gripper.data;
             dirtygripper = true;
+            magnet.data = true;
             break;
         case KEYCODE_C:
             gripper.data -= 0.01;
             gripper.data = gripper.data<0?0:gripper.data;
             dirtygripper = true;
+            magnet.data = false;
             dirty = true;
             break;
         }
@@ -253,7 +260,8 @@ void TeleopUAVKeyboard::keyboardLoop()
         }
         if(dirtygripper == true)
         {
-            grip_pub_.publish(gripper);
+            //grip_pub_.publish(gripper);
+            mag_pub_.publish(magnet);
         }
 
 

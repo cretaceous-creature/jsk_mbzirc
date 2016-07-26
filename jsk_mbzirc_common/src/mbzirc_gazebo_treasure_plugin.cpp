@@ -35,6 +35,7 @@ namespace gazebo
 
 GazeboTreasure::GazeboTreasure()
 {
+      magnet_on.data = false;
 }
 
 GazeboTreasure::~GazeboTreasure()
@@ -101,10 +102,16 @@ void GazeboTreasure::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   pub_score_ = node_handle_->advertise<std_msgs::String>("score", 1, true);  // set latch true
   ros::NodeHandle param_handle(*node_handle_, "controller");
 
+  //subscribe to the gazebo models
+  gazebo_model_sub = node_handle_->subscribe("/gazebo/model_states",3,&GazeboTreasure::gazebocallback,this);
+  magnet_release_sub = node_handle_->subscribe("/mag_on",3,&GazeboTreasure::magnetcallback,this);
+  pub_magnet_get = node_handle_->advertise<std_msgs::Bool>("/gazebo/magnetget",1);
+  gazebo_model_pub_ = node_handle_->advertise<gazebo_msgs::ModelState>("/gazebo/set_model_state",1);
 
 
   update_connection_ = event::Events::ConnectWorldUpdateBegin(
-                                                              boost::bind(&GazeboTreasure::Update, this));
+           boost::bind(&GazeboTreasure::Update, this));
+
 }
 
 
@@ -112,10 +119,67 @@ void GazeboTreasure::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 // Update the controller
 void GazeboTreasure::Update()
 {
-  if ( static_object_ || terminated_ )
+
+
+  if ( terminated_ )
     {
       return;
     }
+  else if(magnet_on.data)
+  {
+      math::Pose pose_object = link_->GetWorldPose();  //the pose of the object
+      std_msgs::Bool gettrue; //get the object
+      gettrue.data = false;
+      //if the uav is close enough, attach to uav
+      for(int i = 0; i < this->gazebo_models.name.size(); i++)   //only if when data are received
+      {
+          //maybe other names, here we use uav
+          int k = gazebo_models.name.at(i).find("uav");
+          if(k>=0) //if find
+          {
+              geometry_msgs::Pose pose_uav = gazebo_models.pose.at(i);
+              if(abs(pose_uav.position.x - pose_object.pos.x)<0.15&&
+                      abs(pose_uav.position.y - pose_object.pos.y)<0.15&&
+                      abs(pose_uav.position.z - pose_object.pos.z)<0.2)
+              {
+                  //object should follow the uav
+
+                  gettrue.data = true;
+                  pub_magnet_get.publish(gettrue);
+//                  math::Pose tmppose = link_->GetWorldPose();
+//                  tmppose.pos.x = pose_uav.position.x;
+//                  tmppose.pos.y = pose_uav.position.y;
+//                  tmppose.pos.z = pose_uav.position.z-0.3;
+//                  tmppose.rot.w = pose_uav.orientation.w;
+//                  tmppose.rot.x = pose_uav.orientation.x;
+//                  tmppose.rot.y = pose_uav.orientation.y;
+//                  tmppose.rot.z = pose_uav.orientation.z;
+//                  model_->SetLinearVel(math::Vector3(0, 0, 0));
+//                  model_->SetAngularVel(math::Vector3(0, 0, 0));
+//                  model_->SetWorldPose(tmppose);
+                  gazebo_msgs::ModelState tmpstate;
+                  tmpstate.model_name = model_->GetName();
+                  tmpstate.pose = gazebo_models.pose.at(i);
+                  tmpstate.twist = gazebo_models.twist.at(i);
+
+                  tmpstate.pose.position.z -= 0.35;
+                  gazebo_model_pub_.publish(tmpstate);
+
+              }
+              break;
+          }
+
+      }
+      last_time_ = world_->GetSimTime();
+      if(gettrue.data)
+          return;   //the object that was picked wont move randomly anymore
+
+  }
+
+  if( static_object_ )
+  {
+      return;
+  }
   // produces randomness out of thin air
   static boost::random::mt19937 rng;
   // distribution that maps to 0..9

@@ -41,6 +41,9 @@
 #include <gazebo/physics/Collision.hh>
 #include <gazebo/common/Events.hh>
 #include <gazebo/common/common.hh>
+#include <gazebo_msgs/ModelStates.h>
+#include <gazebo_msgs/ModelState.h>
+#include <std_msgs/Bool.h>
 
 #include <stdio.h>
 #include <ros/callback_queue.h>
@@ -77,10 +80,30 @@ private:
 
   event::ConnectionPtr update_connection_;
 
+  //treasure plugin for attaching the object to uav
+  ros::Subscriber gazebo_model_sub; //get the model states
+  ros::Subscriber magnet_release_sub; //release the object(disable attach)
+  ros::Publisher pub_magnet_get;
+  ros::Publisher gazebo_model_pub_;
+
+  gazebo_msgs::ModelStates gazebo_models; //model states...
+  std_msgs::Bool magnet_on;
+
+
   double vel_x, vel_y, vel_yaw;
   common::Time last_time_;
   bool terminated_;
   bool static_object_;
+
+  //renew the data of the gazebo objects
+  void gazebocallback(const gazebo_msgs::ModelStates gazebo_model_states)
+  {
+        this->gazebo_models = gazebo_model_states;
+  }
+  void magnetcallback(const std_msgs::Bool on)
+  {
+        this->magnet_on = on;
+  }
 };
 
 }  // namespace gazebo
