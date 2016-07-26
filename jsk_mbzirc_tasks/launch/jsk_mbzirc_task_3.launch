@@ -21,7 +21,7 @@
       <arg name="model" value="$(find jsk_mbzirc_tasks)/urdf/hawk.urdf.xacro"/>
       <arg name="name" value="$(arg uav1_name)" />
       <arg name="tf_prefix" value="$(arg uav1_name)" />
-      <arg name="x" value="68"/>
+      <arg name="x" value="65"/>
       <arg name="y" value="-25"/>
       <arg name="z" value="0.3"/>
     </include>

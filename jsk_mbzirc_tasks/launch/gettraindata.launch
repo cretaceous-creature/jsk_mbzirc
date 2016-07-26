@@ -1,3 +1,4 @@
+<!-- -*- mode: xml -*- -->
 <launch>
   <arg name="paused" default="false"/>
   <arg name="debug" default="false"/>
@@ -15,12 +16,15 @@
 
   <arg name="cheat" default="false" />
 
-  <arg unless="$(arg cheat)" name="x" value="65"/>
+  <arg unless="$(arg cheat)" name="x" value="0"/>  
   <arg     if="$(arg cheat)" name="x" value="0"/>
-  <arg unless="$(arg cheat)" name="y" value="-25"/>
+  <arg unless="$(arg cheat)" name="y" value="0"/>
   <arg     if="$(arg cheat)" name="y" value="0"/>
-  <arg unless="$(arg cheat)" name="z" value="0.3"/>
-  <arg     if="$(arg cheat)" name="z" value="0.3"/>
+  <arg unless="$(arg cheat)" name="z" value="1"/>
+  <arg     if="$(arg cheat)" name="z" value="1"/>
+
+
+
   <group if="$(arg cheat)" >
     <node pkg="jsk_mbzirc_tasks" type="task_1_cheat.py" name="task_1_cheat" />
   </group>

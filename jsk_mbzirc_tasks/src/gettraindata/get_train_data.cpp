@@ -145,19 +145,30 @@ void get_train_data::imageCallback(const sensor_msgs::ImageConstPtr& img)
 {
     try
     {
+        std::string frame_num;
+        std::stringstream ss;
+        ss << frame_counter/2;
+        ss >> frame_num;
         if(!(frame_counter%2))   //ordinary image   pause the physics
         {
             gazebo_pause.call(pause_srv);
             cv::imshow("view", cv_bridge::toCvShare(img,"bgr8")->image);
             setmodelstatus(true);
             this->nh_.setParam("/gazebo/gravity/z",0);
+            cv::imwrite("/home/chen/Desktop/train_data/input/"
+                        + frame_num + ".png",
+                        cv_bridge::toCvShare(img,"bgr8")->image);
         }
         else
         {
+//            cv::imwrite();
             gazebo_pause.call(pause_srv);
             cv::imshow("view2", cv_bridge::toCvShare(img,"bgr8")->image);
             setmodelstatus(false);
             this->nh_.setParam("/gazebo/gravity/z",-9.8);
+            cv::imwrite("/home/chen/Desktop/train_data/output/"
+                        + frame_num + ".png",
+                        cv_bridge::toCvShare(img,"bgr8")->image);
         }
 
         //two count one frame, two images, one input one output
