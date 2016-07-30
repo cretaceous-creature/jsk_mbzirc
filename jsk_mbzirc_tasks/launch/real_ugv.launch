@@ -1,0 +1,34 @@
+<launch>
+
+  <arg name="headless" default="false"/>
+  <arg name="teleopUGV" default="true"/>
+  <arg name="teleopjoy" default="true"/>
+
+  <group unless="$(arg headless)" >
+    <rosparam param="/husky_velocity_controller/linear/x/max_velocity">4.0</rosparam>
+
+    <group if="$(arg teleopjoy)" >
+    <node pkg="jsk_mbzirc_tasks" type="uav_teleop_joy" name="ugv_teleop_joy"
+         >
+  	<param name="teleopUGV" value="$(arg teleopUGV)"/>
+	<remap from="teleopUGV" to="ugv_teleop_joy/teleopUGV"/>
+    </node> 
+    <node pkg="joy" type="joy_node" name="teleop_joy" >
+      	<remap from="joy" to="teleop_joy" />
+    </node>
+    </group>
+
+  <group unless="$(arg teleopjoy)" >
+    <node pkg="jsk_mbzirc_tasks" type="uav_teleop_keyboard" name="ugv_teleop_keyboard"
+          launch-prefix="xterm -e">
+  	<param name="teleopUGV" value="$(arg teleopUGV)"/>
+	<remap from="teleopUGV" to="ugv_teleop_keyboard/teleopUGV"/>
+    </node> 
+  </group>
+
+
+
+
+  </group>
+
+</launch>
