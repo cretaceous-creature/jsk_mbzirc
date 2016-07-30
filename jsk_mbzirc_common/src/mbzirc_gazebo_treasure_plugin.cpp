@@ -128,8 +128,6 @@ void GazeboTreasure::Update()
   else if(magnet_on.data)
   {
       math::Pose pose_object = link_->GetWorldPose();  //the pose of the object
-      std_msgs::Bool gettrue; //get the object
-      gettrue.data = false;
       //if the uav is close enough, attach to uav
       for(int i = 0; i < this->gazebo_models.name.size(); i++)   //only if when data are received
       {
@@ -146,17 +144,6 @@ void GazeboTreasure::Update()
 
                   gettrue.data = true;
                   pub_magnet_get.publish(gettrue);
-//                  math::Pose tmppose = link_->GetWorldPose();
-//                  tmppose.pos.x = pose_uav.position.x;
-//                  tmppose.pos.y = pose_uav.position.y;
-//                  tmppose.pos.z = pose_uav.position.z-0.3;
-//                  tmppose.rot.w = pose_uav.orientation.w;
-//                  tmppose.rot.x = pose_uav.orientation.x;
-//                  tmppose.rot.y = pose_uav.orientation.y;
-//                  tmppose.rot.z = pose_uav.orientation.z;
-//                  model_->SetLinearVel(math::Vector3(0, 0, 0));
-//                  model_->SetAngularVel(math::Vector3(0, 0, 0));
-//                  model_->SetWorldPose(tmppose);
                   gazebo_msgs::ModelState tmpstate;
                   tmpstate.model_name = model_->GetName();
                   tmpstate.pose = gazebo_models.pose.at(i);
@@ -174,6 +161,11 @@ void GazeboTreasure::Update()
       if(gettrue.data)
           return;   //the object that was picked wont move randomly anymore
 
+  }
+  else if(gettrue.data) //magnet off
+  {
+      gettrue.data = false;
+      pub_magnet_get.publish(gettrue);
   }
 
   if( static_object_ )

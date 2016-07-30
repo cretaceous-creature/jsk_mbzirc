@@ -88,7 +88,7 @@ private:
 
   gazebo_msgs::ModelStates gazebo_models; //model states...
   std_msgs::Bool magnet_on;
-
+  std_msgs::Bool gettrue; //get the object
 
   double vel_x, vel_y, vel_yaw;
   common::Time last_time_;

@@ -73,6 +73,12 @@ target_link_libraries(uav_teleop_keyboard ${catkin_LIBRARIES})
 #uav_teleop_joy node
 add_executable(uav_teleop_joy src/teleop/uav_teleop_joy.cpp)
 target_link_libraries(uav_teleop_joy ${catkin_LIBRARIES})
+#uav_treasure_pick node
+add_executable(uav_treasure_pick src/treasurepick/uav_treasure_pick.cpp)
+target_link_libraries(uav_treasure_pick ${catkin_LIBRARIES})
+#uav_treasure_move node
+add_executable(uav_treasure_move src/treasurepick/uav_treasure_move.cpp)
+target_link_libraries(uav_treasure_move ${catkin_LIBRARIES})
 
 #############
 ## Install ##

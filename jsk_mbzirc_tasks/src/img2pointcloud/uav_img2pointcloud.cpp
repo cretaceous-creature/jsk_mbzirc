@@ -57,13 +57,13 @@ public:
     void init()
     {
         //publish pointcloud msgs:
-        std::string topic = nh_.resolveName("imagetoground");
+        std::string topic = nh_.resolveName("/camera/imagetoground");
         pointcloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(topic, 1);
         std::string topic2 = nh_.resolveName("projection_matrix");
         param_matrix_pub_ = nh_.advertise<jsk_mbzirc_msgs::ProjectionMatrix>(topic2,1);
         //for test the image
-        cv::namedWindow("view");
-        cv::startWindowThread();
+        //cv::namedWindow("view");
+        //cv::startWindowThread();
         img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,"/downward_cam/camera/image",2);
         camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,"/downward_cam/camera/camera_info", 2);
         uav_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_,"/ground_truth/state",2);
@@ -76,7 +76,7 @@ public:
             std::cout<<"With GPU support flag = " << GPUFLAG<<std::endl;
             */
         //initialize base_link to camera optical link
-        BaseToCamera.setOrigin(tf::Vector3(0.0,0.0,-0.2));
+        BaseToCamera.setOrigin(tf::Vector3(0,0,-0.2));
         BaseToCamera.setRotation(tf::Quaternion(0.707, -0.707, 0.000, -0.000));
     }
     //call back, for processing
@@ -210,10 +210,10 @@ void uav_img2pointcloud::imageCallback(const sensor_msgs::ImageConstPtr& img,
 {
     try
     {
-        cv::imshow("view", cv_bridge::toCvShare(img,"bgr8")->image);
+       // cv::imshow("view", cv_bridge::toCvShare(img,"bgr8")->image);
         //process to pointcloud
         p2p(img,cam_info,odom);
-        cv::waitKey(10);
+       // cv::waitKey(10);
     }
 
     catch (cv_bridge::Exception& e)
@@ -229,5 +229,5 @@ int main(int argc, char **argv)
     u_i2p.init();
 
     ros::spin();
-    cv::destroyWindow("view");
+   // cv::destroyWindow("view");
 }
