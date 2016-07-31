@@ -244,6 +244,7 @@ void TeleopUAVKeyboard::keyboardLoop()
             gripper.data = gripper.data>0.5?0.5:gripper.data;
             dirtygripper = true;
             magnet.data = true;
+            puts("Magnet Open");
             break;
         case KEYCODE_C:
             gripper.data -= 0.01;
@@ -251,6 +252,7 @@ void TeleopUAVKeyboard::keyboardLoop()
             dirtygripper = true;
             magnet.data = false;
             dirty = true;
+            puts("Magnet Close");
             break;
         }
 

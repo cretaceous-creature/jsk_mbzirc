@@ -42,7 +42,7 @@ catkin_package(
 set(PCL_INCLUDE_DIRS "/usr/include/pcl-1.7/")
 set(EIGEN_INCLUDE_DIRS "/usr/include/eigen3/")
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
+include_directories(include  ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
 
 if(ENABLE_CUDA)
     find_package(CUDA REQUIRED)

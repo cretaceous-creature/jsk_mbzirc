@@ -60,12 +60,14 @@ public:
     {
         //publish pointcloud msgs:
         std::string topic_cmd = nh_.resolveName("/cmd_vel");
-        float Kp = 0.2;
-        float Kd = 0.5;
-        float Ki = 0.0001;
+        float Kp = 0.1;
+        float Kd = 1;
+        float Ki = 0.1;
+        float MAXSPEED = 8.0;
         nh_.setParam("Kp",Kp);
         nh_.setParam("Kd",Kd);
-        nh_.setParam("Kd",Ki);
+        nh_.setParam("Ki",Ki);
+        nh_.setParam("Uav_max_velocity",MAXSPEED);
 
         //subscriber
         aim_pose_sub_ = nh_.subscribe("/aimpose",
@@ -91,13 +93,15 @@ public:
         obj_vel.linear.x = aimpose.position.x - aim_pose.position.x;
         obj_vel.linear.y = aimpose.position.y - aim_pose.position.y;
         obj_vel.linear.z = aimpose.position.z - aim_pose.position.z; //z is not necessary for following
+        //obj_vel.linear.x*=2;obj_vel.linear.y*=2;
+
         aim_pose = aimpose; //renew the aimpose..
 
         //get the twist
         geometry_msgs::Twist diff;
         diff.linear.x = aim_pose.position.x - camera_center_coords.position.x;
         diff.linear.y = aim_pose.position.y - camera_center_coords.position.y;
-        diff.linear.z = aim_pose.position.z - camera_center_coords.position.z;
+        diff.linear.z = aim_pose.position.z+0.2 - uav_odom.pose.pose.position.z;
 
         //delta diff twist...
         d_diff_twist.linear.x = diff.linear.x - diff_twist.linear.x;
@@ -107,9 +111,17 @@ public:
         i_diff_twist.linear.x += diff.linear.x;
         i_diff_twist.linear.y += diff.linear.y;
         i_diff_twist.linear.z += diff.linear.z;
-        i_diff_twist.linear.x = i_diff_twist.linear.x>500.0?500.0:i_diff_twist.linear.x;
-        i_diff_twist.linear.y = i_diff_twist.linear.y>500.0?500.0:i_diff_twist.linear.y;
-        i_diff_twist.linear.z = i_diff_twist.linear.z>50.0?50.0:i_diff_twist.linear.z;
+
+        i_diff_twist.linear.x /= 2;
+        i_diff_twist.linear.y /= 2;
+        i_diff_twist.linear.z /= 2;
+
+//        i_diff_twist.linear.x = i_diff_twist.linear.x>500.0?500.0:i_diff_twist.linear.x;
+//        i_diff_twist.linear.y = i_diff_twist.linear.y>500.0?500.0:i_diff_twist.linear.y;
+//        i_diff_twist.linear.z = i_diff_twist.linear.z>5.0?5.0:i_diff_twist.linear.z;
+//        i_diff_twist.linear.x = i_diff_twist.linear.x<-500.0?-500.0:i_diff_twist.linear.x;
+//        i_diff_twist.linear.y = i_diff_twist.linear.y<-500.0?-500.0:i_diff_twist.linear.y;
+//        i_diff_twist.linear.z = i_diff_twist.linear.z<-5.0?-5.0:i_diff_twist.linear.z;
 
         //renew the diff twist
         diff_twist = diff;
@@ -120,8 +132,8 @@ public:
 
             float A[2][2];
             float bv[2];
-            int i = 240;
-            int j = 320;
+            float i = 239.5;
+            float j = 319.5;
             A[0][0] = j * projection_matrix.data.at(8) -
                     projection_matrix.data.at(0);
             A[0][1] = j * projection_matrix.data.at(9) -
@@ -148,28 +160,42 @@ public:
         uav_odom = odom;
         //PID control the diff
         vel_world_uav = obj_vel;  //send the uav to the same speed of the truck.
-        float Kp, Kd, Ki;
+        float Kp, Kd, Ki,MAXSPEED;
         //get param
         nh_.getParam("Kp",Kp);
         nh_.getParam("Kd",Kd);
-        nh_.getParam("Kd",Ki);
-        //diff_twist need to be 0,0,0   d_diff_twist is the differential of diff_twist
-        vel_world_uav.linear.x += Kp * diff_twist.linear.x - Kd * d_diff_twist.linear.x
-                +Ki * i_diff_twist.linear.x;
-        vel_world_uav.linear.y += Kp * diff_twist.linear.y - Kd * d_diff_twist.linear.y
-                +Ki * i_diff_twist.linear.y;
-        //disable z control
-  //        vel_cmd_uav.linear.z += Kp * diff_twist.linear.z - Kd * d_diff_twist.linear.z;
+        nh_.getParam("Ki",Ki);
+        nh_.getParam("Uav_max_velocity",MAXSPEED);
 
-        vel_world_uav.linear.x = vel_world_uav.linear.x>4.0?4.0:vel_world_uav.linear.x;
-        vel_world_uav.linear.y = vel_world_uav.linear.y>4.0?4.0:vel_world_uav.linear.y;
+        //diff_twist need to be 0,0,0   d_diff_twist is the differential of diff_twist
+        //when it is too faraway, no I control
+        if(fabs(diff_twist.linear.x)>10||fabs(diff_twist.linear.y)>10)
+          {
+            vel_world_uav.linear.x += Kp * diff_twist.linear.x - Kd * d_diff_twist.linear.x;                +Ki * i_diff_twist.linear.x;
+            vel_world_uav.linear.y += Kp * diff_twist.linear.y - Kd * d_diff_twist.linear.y;
+            //when the distance is small enough, control z(idea)
+            vel_world_uav.linear.z += Kp/2 * diff_twist.linear.z - Kd/2 * d_diff_twist.linear.z;
+          }
+        else
+          {
+            vel_world_uav.linear.x += Kp * diff_twist.linear.x - Kd * d_diff_twist.linear.x
+                +Ki*2 * i_diff_twist.linear.x;
+            vel_world_uav.linear.y += Kp * diff_twist.linear.y - Kd * d_diff_twist.linear.y
+                +Ki*2 * i_diff_twist.linear.y;
+            vel_world_uav.linear.z += Kp * diff_twist.linear.z- Kd * d_diff_twist.linear.z
+                +Ki * i_diff_twist.linear.z;
+          }
+
+        //el_world_uav.linear.z = 0;
+
+        vel_world_uav.linear.x = vel_world_uav.linear.x>MAXSPEED?MAXSPEED:vel_world_uav.linear.x;
+        vel_world_uav.linear.y = vel_world_uav.linear.y>MAXSPEED?MAXSPEED:vel_world_uav.linear.y;
         vel_world_uav.linear.z = vel_world_uav.linear.z>1.0?1.0:vel_world_uav.linear.z;
 
-        vel_world_uav.linear.x = vel_world_uav.linear.x<-4.0?-4.0:vel_world_uav.linear.x;
-        vel_world_uav.linear.y = vel_world_uav.linear.y<-4.0?-4.0:vel_world_uav.linear.y;
+        vel_world_uav.linear.x = vel_world_uav.linear.x<-MAXSPEED?-MAXSPEED:vel_world_uav.linear.x;
+        vel_world_uav.linear.y = vel_world_uav.linear.y<-MAXSPEED?-MAXSPEED:vel_world_uav.linear.y;
         vel_world_uav.linear.z = vel_world_uav.linear.z<-1.0?-1.0:vel_world_uav.linear.z;
 
-        vel_world_uav.linear.z = 0;
 
         tf::Pose tfpose;
         tf::Vector3 tftwist;
@@ -181,8 +207,8 @@ public:
         tf::Vector3 axis = rot.getAxis();
         tfScalar angle = rot.getAngle();
         tftwist = tftwist.rotate(axis,angle);
-        ROS_WARN("speed is %f,%f,%f",tftwist.getX(),tftwist.getY(),
-                 tftwist.getZ());
+        //ROS_WARN("speed is %f,%f,%f",tftwist.getX(),tftwist.getY(),
+        //         tftwist.getZ());
         vel_cmd_uav.linear.x = tftwist.getX();
         vel_cmd_uav.linear.y = tftwist.getY();
         vel_cmd_uav.linear.z = tftwist.getZ();

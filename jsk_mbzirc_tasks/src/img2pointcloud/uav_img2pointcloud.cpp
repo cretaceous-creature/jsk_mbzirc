@@ -24,6 +24,7 @@
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Float64.h>
 #include <iostream>
+#include <std_msgs/Bool.h>
 //for test
 #include <tf/transform_broadcaster.h>
 //pcl
@@ -50,6 +51,9 @@ private:
     ros::NodeHandle nh_;
     message_filters::Synchronizer<MySyncPolicy> *sync;
     tf::Transform BaseToCamera;
+    //task3
+    ros::Subscriber pick_state_sub_;
+    std_msgs::Bool pick_state;
 #define Ground_Z 0.0
    //test
     tf::TransformBroadcaster br;
@@ -62,8 +66,8 @@ public:
         std::string topic2 = nh_.resolveName("projection_matrix");
         param_matrix_pub_ = nh_.advertise<jsk_mbzirc_msgs::ProjectionMatrix>(topic2,1);
         //for test the image
-        //cv::namedWindow("view");
-        //cv::startWindowThread();
+        cv::namedWindow("view");
+        cv::startWindowThread();
         img_sub_  = new message_filters::Subscriber<sensor_msgs::Image>(nh_,"/downward_cam/camera/image",2);
         camera_info_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo>(nh_,"/downward_cam/camera/camera_info", 2);
         uav_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_,"/ground_truth/state",2);
@@ -76,7 +80,8 @@ public:
             std::cout<<"With GPU support flag = " << GPUFLAG<<std::endl;
             */
         //initialize base_link to camera optical link
-        BaseToCamera.setOrigin(tf::Vector3(0,0,-0.2));
+        pick_state_sub_ = nh_.subscribe("/gazebo/magnetget",1,&uav_img2pointcloud::PickCallback,this);
+        BaseToCamera.setOrigin(tf::Vector3(0,0,-0.05));
         BaseToCamera.setRotation(tf::Quaternion(0.707, -0.707, 0.000, -0.000));
     }
     //call back, for processing
@@ -87,6 +92,8 @@ public:
     void p2p(const sensor_msgs::ImageConstPtr& img,
              const sensor_msgs::CameraInfoConstPtr& cam_info,
              const nav_msgs::OdometryConstPtr& odom);
+    //for task3
+    void PickCallback(const std_msgs::Bool pickstate);
     // class's family...
     ~uav_img2pointcloud()
     {    }
@@ -185,10 +192,11 @@ void uav_img2pointcloud::p2p(const sensor_msgs::ImageConstPtr& img,
 #endif
     //get the duration....
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"process_time is "<< duration << " second" <<'\n';
+    //std::cout<<"process_time is "<< duration << " second" <<'\n';
     //publish pointcloud
     pcl::toROSMsg(Pointcloud,cloud_msg);
-    pointcloud_pub_.publish(cloud_msg);
+    if(!pick_state.data)
+      pointcloud_pub_.publish(cloud_msg);
     //publish param matrix 4*3 = 12
     param_vector.header = img->header;
     for(int i = 0; i < 4; i++)
@@ -210,16 +218,30 @@ void uav_img2pointcloud::imageCallback(const sensor_msgs::ImageConstPtr& img,
 {
     try
     {
-       // cv::imshow("view", cv_bridge::toCvShare(img,"bgr8")->image);
+        cv::imshow("view", cv_bridge::toCvShare(img,"bgr8")->image);
         //process to pointcloud
         p2p(img,cam_info,odom);
-       // cv::waitKey(10);
+        cv::waitKey(10);
     }
 
     catch (cv_bridge::Exception& e)
     {
         ROS_ERROR("Could not convert from '%s' to 'bgr8'.", img->encoding.c_str());
     }
+}
+//for task3 pick state call back
+void uav_img2pointcloud::PickCallback(const std_msgs::Bool pickstate)
+{
+
+//    if(!pick_state.data&&pickstate.data) //from false to true
+//    {
+//        uav_task_state = Placing;
+//    }
+//    else if(pick_state.data&&!pickstate.data) //frome true to false
+//    {
+//        uav_task_state = Searching;
+//    }
+    pick_state = pickstate;
 }
 
 int main(int argc, char **argv)
@@ -229,5 +251,5 @@ int main(int argc, char **argv)
     u_i2p.init();
 
     ros::spin();
-   // cv::destroyWindow("view");
+    cv::destroyWindow("view");
 }

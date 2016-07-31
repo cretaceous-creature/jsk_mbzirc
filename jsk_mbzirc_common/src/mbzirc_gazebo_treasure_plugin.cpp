@@ -136,9 +136,9 @@ void GazeboTreasure::Update()
           if(k>=0) //if find
           {
               geometry_msgs::Pose pose_uav = gazebo_models.pose.at(i);
-              if(abs(pose_uav.position.x - pose_object.pos.x)<0.15&&
-                      abs(pose_uav.position.y - pose_object.pos.y)<0.15&&
-                      abs(pose_uav.position.z - pose_object.pos.z)<0.2)
+              if(fabs(pose_uav.position.x - pose_object.pos.x)<0.2&&
+                      fabs(pose_uav.position.y - pose_object.pos.y)<0.2&&
+                      fabs(pose_uav.position.z - pose_object.pos.z)<0.5)
               {
                   //object should follow the uav
 
@@ -172,59 +172,59 @@ void GazeboTreasure::Update()
   {
       return;
   }
-  // produces randomness out of thin air
-  static boost::random::mt19937 rng;
-  // distribution that maps to 0..9
-  static boost::random::uniform_int_distribution<> change_direction(0, 299);
 
-  // normal distribution
-  static boost::normal_distribution<> nd(0.0, 1.0);
+//  static boost::random::mt19937 rng;
+//  // distribution that maps to 0..9
+//  static boost::random::uniform_int_distribution<> change_direction(0, 299);
 
-  static boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > var_nor(rng, nd);
+//  // normal distribution
+//  static boost::normal_distribution<> nd(0.0, 1.0);
+
+//  static boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > var_nor(rng, nd);
 
 
-  // max 5km/h = 1.38889 = 5 km/h
-  if ( change_direction(rng) == 0 )
-  {
-    vel_x += var_nor();
-    vel_y += var_nor();
-    vel_yaw += var_nor();
-    double vel = sqrt((vel_x*vel_x)+(vel_y*vel_y));
-    if ( vel > 1.3889 )
-      {
-        vel_x *= 1.3389/vel;
-        vel_y *= 1.3389/vel;
-      }
-    if (fabs(vel_yaw) > 1.3389)
-      {
-        vel_yaw *= 1.3389/fabs(vel_yaw);
-      }
-  }
+//  // max 5km/h = 1.38889 = 5 km/h
+//  if ( change_direction(rng) == 0 )
+//  {
+//    vel_x += var_nor();
+//    vel_y += var_nor();
+//    vel_yaw += var_nor();
+//    double vel = sqrt((vel_x*vel_x)+(vel_y*vel_y));
+//    if ( vel > 1.3889 )
+//      {
+//        vel_x *= 1.3389/vel;
+//        vel_y *= 1.3389/vel;
+//      }
+//    if (fabs(vel_yaw) > 1.3389)
+//      {
+//        vel_yaw *= 1.3389/fabs(vel_yaw);
+//      }
+//  }
 
-  math::Pose pose = link_->GetWorldPose();
-  // 100 x 60
-  if ( pose.pos.x > 45 )
-    {
-      vel_x = -fabs(vel_x);
-    }
+//  math::Pose pose = link_->GetWorldPose();
+//  // 100 x 60
+//  if ( pose.pos.x > 45 )
+//    {
+//      vel_x = -fabs(vel_x);
+//    }
 
-  if ( pose.pos.x < -45 )
-    {
-      vel_x = fabs(vel_x);
-    }
-  if ( pose.pos.y > 25 )
-    {
-      vel_y = -fabs(vel_y);
-    }
+//  if ( pose.pos.x < -45 )
+//    {
+//      vel_x = fabs(vel_x);
+//    }
+//  if ( pose.pos.y > 25 )
+//    {
+//      vel_y = -fabs(vel_y);
+//    }
 
-  if ( pose.pos.y < -25 )
-    {
-      vel_y = fabs(vel_y);
-    }
+//  if ( pose.pos.y < -25 )
+//    {
+//      vel_y = fabs(vel_y);
+//    }
 
-  model_->SetLinearVel(math::Vector3(vel_x, vel_y, 0));
-  model_->SetAngularVel(math::Vector3(0, 0, vel_yaw));
-  last_time_ = world_->GetSimTime();
+//  model_->SetLinearVel(math::Vector3(vel_x, vel_y, 0));
+//  model_->SetAngularVel(math::Vector3(0, 0, vel_yaw));
+//  last_time_ = world_->GetSimTime();
 
   // check score
 }

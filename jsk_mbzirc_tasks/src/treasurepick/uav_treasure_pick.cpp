@@ -15,10 +15,13 @@
 //sys lib
 #include <iostream>
 #include <string>
+#include <stdlib.h>
 //srv
 #include <std_srvs/Empty.h>
 #include <gazebo_msgs/GetModelState.h>
-
+//boost
+#include <boost/random.hpp>
+#include <boost/random/random_device.hpp>
 //pcl
 #include <pcl_ros/point_cloud.h>
 #include <pcl/common/common_headers.h>
@@ -44,14 +47,16 @@ private:
     ros::Subscriber pick_state_sub_;
     //publisher
     ros::Publisher aim_pose_pub_;
+    ros::Publisher mag_pub_;
     //data field
     geometry_msgs::Pose aim_pose;
     geometry_msgs::Pose box_pose;
     geometry_msgs::Pose search_pose;
     std_msgs::Bool pick_state;
+    std_msgs::Bool mag_on;
     nav_msgs::Odometry uav_odom;
     std::vector<Treasure> treasure_vec;
-    const double distthreshold = 0.25;
+    const double distthreshold = 0.2;
     enum State_Machine{Picking, Placing, Searching}uav_task_state;
 
 
@@ -59,17 +64,20 @@ public:
     void init()
     {
        //subscriber
-        object_pose_sub_ = nh_.subscribe("/cluster_decomposer/centroid_pose_array",
+        object_pose_sub_ = nh_.subscribe("/camera/cluster_decomposer/centroid_pose_array",
                                          1,&treasure_pick::ObjPoseCallback,this);
         uav_odom_sub_ = nh_.subscribe("/ground_truth/state",10,&treasure_pick::OdomCallback,this);
         pick_state_sub_ = nh_.subscribe("/gazebo/magnetget",1,&treasure_pick::PickCallback,this);
         aim_pose_pub_ = nh_.advertise<geometry_msgs::Pose>("aimpose",1);
+        mag_pub_ = nh_.advertise<std_msgs::Bool>("/mag_on",1);
         pick_state.data = false;
         //box pose, when picked, go to the box...
         box_pose.position.x = -65;
         box_pose.position.y = 25;
-        box_pose.position.z = 2.5;
-        uav_task_state = Picking;
+        box_pose.position.z = 1.8;
+        search_pose.position.z = 5.5; //6 meters high...
+        aim_pose = search_pose;
+        uav_task_state = Searching;
 
     }
     inline bool DistLessThanThre(geometry_msgs::Point P1, geometry_msgs::Point P2, double threshold)
@@ -86,9 +94,11 @@ public:
     void ObjPoseCallback(const geometry_msgs::PoseArray posearray)
     {
         //update the aim_pose
+        if(uav_task_state==Placing)
+          return;
 
         if(!posearray.poses.size())
-            return;
+          return;
 
         if(!treasure_vec.size())
         {
@@ -106,7 +116,7 @@ public:
                                     ,posearray.poses.at(i).position
                                     ,distthreshold))
                 {
-                    treasure_vec.at(j).visible_times += 5; //plus 5
+                    treasure_vec.at(j).visible_times += 8; //plus 5
                     //if they are the same one, update the pose
                     treasure_vec.at(j).pose = posearray.poses.at(i);
                     treasure_vec.at(j).visible_times
@@ -148,6 +158,9 @@ public:
                 aim_pose = treasure_vec.at(i).pose;
                 //aim_pose_pub_.publish(aim_pose);
                 uav_task_state = Picking;
+                //open magnet
+                mag_on.data = true;
+                mag_pub_.publish(mag_on);
                 break;
             }
         }
@@ -157,26 +170,93 @@ public:
         uav_odom = odom; //update
         //publish by status of the state machine
         //can be set to a fixed frequency..
-        if(uav_task_state==Placing)
+        if(uav_task_state==Placing)\
+          {
             aim_pose_pub_.publish(box_pose);
+            //check if the location is near and then publish mag false
+            //and the speed is very low
+            if((fabs(uav_odom.pose.pose.position.x-box_pose.position.x)<0.15)&&
+               (fabs(uav_odom.pose.pose.position.y-box_pose.position.y)<0.15)&&
+               (fabs(uav_odom.pose.pose.position.z-box_pose.position.z)<0.3)&&
+               (fabs(uav_odom.twist.twist.linear.x)<0.08)&&
+               (fabs(uav_odom.twist.twist.linear.y)<0.08)&&
+               (fabs(uav_odom.twist.twist.linear.z)<0.08))
+              {
+                mag_on.data = false;
+                mag_pub_.publish(mag_on);
+                aim_pose = search_pose;
+                ROS_WARN("left treasure at %f,%f,%f",
+                         uav_odom.pose.pose.position.x,
+                         uav_odom.pose.pose.position.y,
+                         uav_odom.pose.pose.position.z);
+              }
+          }
         else if(uav_task_state==Searching)
-            aim_pose_pub_.publish(search_pose);
-        else
+          {
+            float Kp = 0.1;
+            float searchspeed = 4.0;
+            nh_.setParam("Uav_max_velocity",searchspeed);
+            nh_.setParam("Kp",Kp);
+           /*here we need to check the if the search aim_pose
+            is very close to the odom, we need to randomly generate
+            anther search pose
+           */
+            if((fabs(uav_odom.pose.pose.position.x-search_pose.position.x)<0.3)&&
+               (fabs(uav_odom.pose.pose.position.y-search_pose.position.y)<0.3)&&
+               (fabs(uav_odom.pose.pose.position.z-search_pose.position.z-0.2)<0.5)&&
+               (fabs(uav_odom.twist.twist.linear.x)<0.2)&&
+               (fabs(uav_odom.twist.twist.linear.y)<0.2)&&
+               (fabs(uav_odom.twist.twist.linear.z)<0.2))
+              {
+                int randx = rand()%80;
+                int randy = rand()%40;
+                search_pose.position.x = randx-40;
+                search_pose.position.y = randy-20;
+                aim_pose = search_pose;
+                ROS_WARN("Send random search place at: %f,%f,%f",
+                         search_pose.position.x,
+                         search_pose.position.y,
+                         search_pose.position.z
+                         );
+              }
+            //we have already set aim_pose to the search pose.
+            //if the detector renew the aim_pose, we will pick...
             aim_pose_pub_.publish(aim_pose);
+          }
+        else
+          {
+            //picking
+            //consider pick failure
+            if((fabs(uav_odom.pose.pose.position.x-aim_pose.position.x)<0.2)&&
+               (fabs(uav_odom.pose.pose.position.y-aim_pose.position.y)<0.2)&&
+               (fabs(uav_odom.pose.pose.position.z-aim_pose.position.z-0.2)<0.2)&&
+               (fabs(uav_odom.twist.twist.linear.x)<0.05)&&
+               (fabs(uav_odom.twist.twist.linear.y)<0.05)&&
+               (fabs(uav_odom.twist.twist.linear.z)<0.05))
+              {
+                aim_pose = search_pose;
+              }
+
+
+            float Kp = 0.1;
+            float maxspeed = 8.0;
+            nh_.setParam("Uav_max_velocity",maxspeed);
+            nh_.setParam("Kp",Kp);
+            aim_pose_pub_.publish(aim_pose);
+          }
     }
     void PickCallback(const std_msgs::Bool pickstate)
     {
 
         if(!pick_state.data&&pickstate.data) //from false to true
         {
-            object_pose_sub_.shutdown(); //unsubscribe
             uav_task_state = Placing;
         }
         else if(pick_state.data&&!pickstate.data) //frome true to false
         {
-            object_pose_sub_ = nh_.subscribe("/cluster_decomposer/centroid_pose_array",
-                                             1,&treasure_pick::ObjPoseCallback,this);
             uav_task_state = Searching;
+            aim_pose = search_pose;
+            treasure_vec.clear();
         }
         pick_state = pickstate;
     }
