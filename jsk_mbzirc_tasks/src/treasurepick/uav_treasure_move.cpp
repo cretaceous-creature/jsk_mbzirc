@@ -190,11 +190,11 @@ public:
 
         vel_world_uav.linear.x = vel_world_uav.linear.x>MAXSPEED?MAXSPEED:vel_world_uav.linear.x;
         vel_world_uav.linear.y = vel_world_uav.linear.y>MAXSPEED?MAXSPEED:vel_world_uav.linear.y;
-        vel_world_uav.linear.z = vel_world_uav.linear.z>1.0?1.0:vel_world_uav.linear.z;
+        vel_world_uav.linear.z = vel_world_uav.linear.z>3.0?3.0:vel_world_uav.linear.z;
 
         vel_world_uav.linear.x = vel_world_uav.linear.x<-MAXSPEED?-MAXSPEED:vel_world_uav.linear.x;
         vel_world_uav.linear.y = vel_world_uav.linear.y<-MAXSPEED?-MAXSPEED:vel_world_uav.linear.y;
-        vel_world_uav.linear.z = vel_world_uav.linear.z<-1.0?-1.0:vel_world_uav.linear.z;
+        vel_world_uav.linear.z = vel_world_uav.linear.z<-3.0?-3.0:vel_world_uav.linear.z;
 
 
         tf::Pose tfpose;
