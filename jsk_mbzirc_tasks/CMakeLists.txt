@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE Debug)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-      roscpp cv_bridge image_transport tf message_filters nav_msgs sensor_msgs jsk_mbzirc_msgs)
+      roscpp cv_bridge image_transport tf message_filters nav_msgs sensor_msgs jsk_mbzirc_msgs dynamic_reconfigure)
 
 # Depend on system install of Gazebo and SDFormat
 find_package(gazebo_ros QUIET)
@@ -32,13 +32,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
 
-###################################
-## catkin specific configuration ##
-###################################
-catkin_package(
-    CATKIN_DEPENDS
-)
-
 set(PCL_INCLUDE_DIRS "/usr/include/pcl-1.7/")
 set(EIGEN_INCLUDE_DIRS "/usr/include/eigen3/")
 
@@ -62,6 +55,8 @@ if(ENABLE_CUDA)
 else()
     add_executable(uav_img2pointcloud src/img2pointcloud/uav_img2pointcloud.cpp)
     target_link_libraries(uav_img2pointcloud ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+    add_executable(task3_vision src/task3vision/task3vision.cpp)
+    target_link_libraries(task3_vision ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
     #get train data node
     add_executable(get_train_data src/gettraindata/get_train_data.cpp)
     target_link_libraries(get_train_data ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
@@ -79,6 +74,24 @@ target_link_libraries(uav_treasure_pick ${catkin_LIBRARIES})
 #uav_treasure_move node
 add_executable(uav_treasure_move src/treasurepick/uav_treasure_move.cpp)
 target_link_libraries(uav_treasure_move ${catkin_LIBRARIES})
+######################
+## CFG Generation ##
+######################
+generate_dynamic_reconfigure_options(
+  cfg/Filterparam.cfg
+  #...
+)
+
+# make sure configure headers are built before any node using them
+add_dependencies(task3_vision ${PROJECT_NAME}_gencfg)
+
+###################################
+## catkin specific configuration ##
+###################################
+catkin_package(
+    CATKIN_DEPENDS
+)
+
 
 #############
 ## Install ##
