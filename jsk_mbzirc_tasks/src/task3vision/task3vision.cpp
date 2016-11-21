@@ -20,9 +20,9 @@
 //OPENCV
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <opencv2/cudafilters.hpp>
-#include <opencv2/cudaimgproc.hpp>
-#include <opencv2/core.hpp>
+//#include <opencv2/cudafilters.hpp>
+//#include <opencv2/cudaimgproc.hpp>
+#include <opencv2/core/core.hpp>
 
 //msg headers.
 #include <sensor_msgs/Image.h>
